@@ -76,6 +76,60 @@ npm run start   # run production server (default Next port 3000 unless configure
 npm run lint    # ESLint
 ```
 
+### Windows
+
+Double-click `account.vbs` in the project folder. It starts `npm run dev` and opens Brave as an app window at `http://localhost:3001`. The script uses the folder it lives in (no hard-coded drive path).
+
+## Running on Linux (Zorin OS)
+
+Tested target: **Zorin OS 17** (Ubuntu 24.04 based). Windows launch via `account.vbs` is unchanged.
+
+### Prerequisites
+
+- **Node.js 18.17+** and **npm**
+- A **PostgreSQL** database (local or remote)
+- Optional for a nicer menu icon: ImageMagick (`convert`) or Python `pillow`
+
+### Setup
+
+1. Clone or copy the project, then create `.env.local` in the project root:
+
+```bash
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DATABASE_NAME
+```
+
+2. Apply the SQL init scripts (same order as above / [docs/OPERATIONS.md](docs/OPERATIONS.md)).
+
+3. Install dependencies once (also auto-runs if missing when you start):
+
+```bash
+npm install
+```
+
+4. Install the app-menu shortcut once:
+
+```bash
+chmod +x start-linux.sh stop-linux.sh install-linux-shortcut.sh
+./install-linux-shortcut.sh
+```
+
+### Launch
+
+- From the Zorin app menu: **Accountz**
+- Or from a terminal in the project folder:
+
+```bash
+./start-linux.sh
+```
+
+`start-linux.sh` starts `npm run dev` on port **3001** (logs to `.accountz.log`), waits until the server responds, then opens an app-style browser window (Brave → Chrome → Chromium → `xdg-open`). If port 3001 is already in use, it only opens the browser. Closing the window does **not** stop the server.
+
+Stop the server:
+
+```bash
+./stop-linux.sh
+```
+
 ## Documentation
 
 | Document | Audience | Contents |

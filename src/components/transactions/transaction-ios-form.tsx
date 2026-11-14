@@ -626,15 +626,16 @@ export function TransactionIosForm({
 }
 
 export function buildTransactionFormValues(
-  type: "income" | "expense" = "expense",
+  type: "income" | "expense" | "transfer" = "expense",
   categories: Category[] = [],
   overrides: Partial<TransactionFormValues> = {}
 ): TransactionFormValues {
+  const categoryType = type === "transfer" ? "expense" : type;
   return {
     description: "",
     amount: "",
     type,
-    categoryId: getDefaultCategoryId(categories, type),
+    categoryId: getDefaultCategoryId(categories, categoryType),
     date: getLocalDateString(),
     accountId: "",
     toAccountId: "",

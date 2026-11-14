@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Accountz
+Comment=Personal Finance Tracker (My Finances)
+Exec=__ACCOUNTZ_START__
+Icon=__ACCOUNTZ_ICON__
+Terminal=false
+Categories=Office;Finance;
+StartupNotify=true

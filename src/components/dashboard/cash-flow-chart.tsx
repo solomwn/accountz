@@ -175,7 +175,7 @@ export function CashFlowChart({ data }: CashFlowChartProps) {
           <Bar
             dataKey="inflow"
             barSize={BAR_SIZE}
-            shape={(props) => (
+            shape={(props: BarShapeProps) => (
               <RoundedCashFlowBar
                 {...props}
                 fill={INFLOW_FILL}
@@ -189,7 +189,7 @@ export function CashFlowChart({ data }: CashFlowChartProps) {
           <Bar
             dataKey="outflow"
             barSize={BAR_SIZE}
-            shape={(props) => (
+            shape={(props: BarShapeProps) => (
               <RoundedCashFlowBar
                 {...props}
                 fill={OUTFLOW_FILL}
