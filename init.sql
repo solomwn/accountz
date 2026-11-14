@@ -1,0 +1,10 @@
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+CREATE TABLE IF NOT EXISTS transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  description VARCHAR NOT NULL,
+  amount DECIMAL(10, 2) NOT NULL,
+  type VARCHAR NOT NULL,
+  category VARCHAR NOT NULL,
+  date DATE NOT NULL DEFAULT CURRENT_DATE
+);
