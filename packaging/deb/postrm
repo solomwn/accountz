@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+if [ -d /run/systemd/system ]; then
+  systemctl daemon-reload >/dev/null 2>&1 || true
+fi
+
+if [ "$1" = "purge" ]; then
+  rm -rf /etc/accountz
+  # Your data is NOT deleted. To delete it permanently:
+  echo "accountz: your database was kept. To delete it for good run:"
+  echo "  sudo -u postgres dropdb accountz && sudo -u postgres dropuser accountz"
+fi
+
+exit 0

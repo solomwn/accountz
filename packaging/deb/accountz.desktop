@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Accountz
+GenericName=Personal Finance Tracker
+Comment=Track income, expenses, budgets and bills
+Exec=/usr/bin/accountz
+Icon=/usr/share/pixmaps/accountz.png
+Terminal=false
+Categories=Office;Finance;
+StartupNotify=true

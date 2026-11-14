@@ -1,0 +1,13 @@
+Package: accountz
+Version: @VERSION@
+Section: misc
+Priority: optional
+Architecture: @ARCH@
+Installed-Size: @SIZE@
+Depends: nodejs (>= 18.17), postgresql, postgresql-client, curl, xdg-utils, openssl, adduser
+Maintainer: Solomon <noreply@localhost>
+Description: Accountz - personal finance tracker
+ Track income, expenses and transfers across accounts, manage categories,
+ budgets and scheduled bills, and review monthly and yearly reports.
+ Runs locally: a background service on http://localhost:3001 backed by a
+ local PostgreSQL database that is created on install.

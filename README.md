@@ -142,3 +142,34 @@ Stop the server:
 ## License / privacy
 
 This project is marked `"private": true` in `package.json`. Do not commit `.env.local` or real credentials.
+
+## Installable .deb package (Zorin OS / Ubuntu 24.04)
+
+Build it (on Linux, from the repo root):
+
+```bash
+./packaging/build-deb.sh
+```
+
+This creates `dist/accountz_<version>_amd64.deb`. Bump `"version"` in `package.json` before each new release.
+
+Install it on any Zorin OS 18 / Ubuntu 24.04 machine:
+
+```bash
+sudo apt install ./accountz_0.1.0_amd64.deb
+```
+
+The package:
+
+- installs Node.js and PostgreSQL if missing
+- creates a local `accountz` database with a random password (stored in `/etc/accountz/accountz.env`)
+- creates/updates all tables
+- runs the app as the `accountz` background service on http://localhost:3001 (starts on boot)
+- adds **Accountz** to the app menu
+
+Upgrade: install the newer `.deb` the same way; data is kept.
+Uninstall: `sudo apt remove accountz` (data is kept). `sudo apt purge accountz` also removes the config; the database itself is never deleted automatically.
+
+Service commands: `systemctl status accountz`, `sudo systemctl restart accountz`, `journalctl -u accountz`.
+
+Do not install the .deb on a machine where you develop with `start-linux.sh` / `npm run dev`: both use port 3001 and the `accountz` database user.

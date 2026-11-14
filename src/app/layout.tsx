@@ -17,6 +17,9 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
+// Always render with live database data (never prerender at build time).
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Personal Finance Tracker",
   description: "Track your income and expenses",

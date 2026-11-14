@@ -1,0 +1,78 @@
+#!/bin/bash
+set -e
+
+ENV_DIR=/etc/accountz
+ENV_FILE=$ENV_DIR/accountz.env
+APP=/opt/accountz
+DB=accountz
+DB_USER=accountz
+
+as_postgres() { runuser -u postgres -- "$@"; }
+have_systemd() { [ -d /run/systemd/system ]; }
+
+if [ "$1" = "configure" ]; then
+  # 1. System user that runs the service
+  if ! getent passwd accountz >/dev/null; then
+    adduser --system --group --no-create-home --home /opt/accountz \
+      --shell /usr/sbin/nologin accountz >/dev/null
+  fi
+
+  # 2. Make sure PostgreSQL is running
+  if have_systemd; then
+    systemctl start postgresql >/dev/null 2>&1 || true
+  fi
+  for _ in $(seq 30); do
+    as_postgres psql -qtAc "SELECT 1" >/dev/null 2>&1 && break
+    sleep 1
+  done
+  if ! as_postgres psql -qtAc "SELECT 1" >/dev/null 2>&1; then
+    echo "accountz: PostgreSQL is not running. Start it, then run: sudo dpkg-reconfigure accountz" >&2
+    exit 1
+  fi
+
+  # 3. Database user + database (first install, or if the config was removed)
+  if [ ! -s "$ENV_FILE" ]; then
+    PASS="$(openssl rand -hex 24)"
+    if as_postgres psql -qtAc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'" | grep -q 1; then
+      as_postgres psql -q -c "ALTER ROLE $DB_USER WITH LOGIN PASSWORD '$PASS';"
+    else
+      as_postgres psql -q -c "CREATE ROLE $DB_USER WITH LOGIN PASSWORD '$PASS';"
+    fi
+    if ! as_postgres psql -qtAc "SELECT 1 FROM pg_database WHERE datname='$DB'" | grep -q 1; then
+      as_postgres psql -q -c "CREATE DATABASE $DB OWNER $DB_USER;"
+    fi
+    # pgcrypto needs superuser on some setups; create it up front
+    as_postgres psql -q -d "$DB" -c 'CREATE EXTENSION IF NOT EXISTS "pgcrypto";'
+
+    mkdir -p "$ENV_DIR"
+    umask 027
+    echo "DATABASE_URL=postgresql://$DB_USER:$PASS@127.0.0.1:5432/$DB" > "$ENV_FILE"
+    chown root:accountz "$ENV_FILE"
+    chmod 640 "$ENV_FILE"
+    echo "accountz: database '$DB' is ready"
+  fi
+
+  # 4. Create / update tables (scripts are safe to re-run on upgrade)
+  set -a; . "$ENV_FILE"; set +a
+  while read -r f; do
+    [ -n "$f" ] || continue
+    psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -f "$APP/sql/$f.sql" >/dev/null 2>&1 || {
+      echo "accountz: failed applying $f.sql" >&2
+      psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -f "$APP/sql/$f.sql" >&2 || true
+      exit 1
+    }
+  done < "$APP/sql/ORDER"
+
+  # 5. Start the service
+  if have_systemd; then
+    systemctl daemon-reload
+    systemctl enable accountz.service >/dev/null 2>&1
+    systemctl restart accountz.service
+  fi
+
+  command -v update-desktop-database >/dev/null && update-desktop-database -q /usr/share/applications || true
+
+  echo "accountz: installed. Open \"Accountz\" from the app menu (http://localhost:3001)."
+fi
+
+exit 0
