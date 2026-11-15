@@ -176,4 +176,4 @@ Do not install the .deb on a machine where you develop with `start-linux.sh` / `
 
 ## License
 
-[MIT](LICENSE) © 2026 Solomon
+[MIT](LICENSE) © 2026 Solomon A.
