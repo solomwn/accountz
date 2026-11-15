@@ -173,3 +173,7 @@ Uninstall: `sudo apt remove accountz` (data is kept). `sudo apt purge accountz` 
 Service commands: `systemctl status accountz`, `sudo systemctl restart accountz`, `journalctl -u accountz`.
 
 Do not install the .deb on a machine where you develop with `start-linux.sh` / `npm run dev`: both use port 3001 and the `accountz` database user.
+
+## License
+
+[MIT](LICENSE) © 2026 Solomon
