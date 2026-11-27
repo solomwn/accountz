@@ -8,6 +8,7 @@ Type=simple
 User=accountz
 Group=accountz
 WorkingDirectory=/opt/accountz
+StateDirectory=accountz
 EnvironmentFile=/etc/accountz/accountz.env
 Environment=NODE_ENV=production
 Environment=PORT=3001

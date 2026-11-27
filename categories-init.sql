@@ -8,7 +8,11 @@ CREATE TABLE IF NOT EXISTS categories (
   group_name VARCHAR
 );
 
-INSERT INTO categories (name, type, color) VALUES
+-- Starter categories only for a brand-new database, so re-running this
+-- script (e.g. on upgrade) never brings back categories you deleted.
+INSERT INTO categories (name, type, color)
+SELECT v.name, v.type, v.color
+FROM (VALUES
   ('Salary', 'income', '#22c55e'),
   ('Food', 'expense', '#ef4444'),
   ('Rent', 'expense', '#f59e0b'),
@@ -17,6 +21,8 @@ INSERT INTO categories (name, type, color) VALUES
   ('Entertainment', 'expense', '#ec4899'),
   ('Healthcare', 'expense', '#14b8a6'),
   ('Other', 'expense', '#94a3b8')
+) AS v(name, type, color)
+WHERE NOT EXISTS (SELECT 1 FROM categories)
 ON CONFLICT (name) DO NOTHING;
 
 ALTER TABLE transactions

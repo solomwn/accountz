@@ -51,13 +51,14 @@ DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DATABASE_NAME
 ```bash
 psql "$DATABASE_URL" -f init.sql
 psql "$DATABASE_URL" -f accounts-init.sql
+psql "$DATABASE_URL" -f budget-init.sql
 psql "$DATABASE_URL" -f categories-init.sql
 psql "$DATABASE_URL" -f category-groups-init.sql
 psql "$DATABASE_URL" -f transfers-init.sql
-psql "$DATABASE_URL" -f budget-init.sql
 psql "$DATABASE_URL" -f scheduled-bills-init.sql
 psql "$DATABASE_URL" -f scheduled-bills-account-init.sql
 psql "$DATABASE_URL" -f account-types-init.sql
+psql "$DATABASE_URL" -f loan-details-init.sql
 ```
 
 4. Start the development server (port **3001**, from `package.json`):
@@ -156,7 +157,7 @@ This creates `dist/accountz_<version>_amd64.deb`. Bump `"version"` in `package.j
 Install it on any Zorin OS 18 / Ubuntu 24.04 machine:
 
 ```bash
-sudo apt install ./accountz_0.1.0_amd64.deb
+sudo apt install ./accountz_0.2.0_amd64.deb
 ```
 
 The package:

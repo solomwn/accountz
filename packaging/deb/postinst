@@ -17,6 +17,10 @@ if [ "$1" = "configure" ]; then
       --shell /usr/sbin/nologin accountz >/dev/null
   fi
 
+  # Writable runtime cache for Next.js (/opt/accountz/.next/cache links here)
+  mkdir -p /var/lib/accountz/cache
+  chown -R accountz:accountz /var/lib/accountz
+
   # 2. Make sure PostgreSQL is running
   if have_systemd; then
     systemctl start postgresql >/dev/null 2>&1 || true

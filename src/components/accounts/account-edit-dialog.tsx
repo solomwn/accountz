@@ -3,7 +3,12 @@
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { updateAccount, type AccountBalance, type AccountType } from "@/app/actions";
+import {
+  updateAccount,
+  type AccountBalance,
+  type AccountType,
+  type LoanDetails,
+} from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -32,10 +37,48 @@ import {
   premiumSubmitButtonClass,
 } from "@/lib/premium-form-dialog";
 
-const accountFormFieldsClass = "px-8 py-6";
+const accountFormFieldsClass = "px-8 py-6 max-h-[65vh] overflow-y-auto";
 const accountFormGridClass = "grid grid-cols-1 md:grid-cols-2 gap-6";
 const premiumTextareaClass =
   "w-full min-h-[100px] resize-y p-4 rounded-xl border-2 border-slate-200 bg-white text-slate-800 font-medium shadow-sm focus-visible:ring-0 focus-visible:border-blue-500 focus:ring-0 focus:border-blue-500 outline-none";
+
+const emptyLoan: LoanDetails = {
+  lender: null,
+  interestRate: null,
+  initialAmount: null,
+  installmentAmount: null,
+  nextPaymentDate: null,
+  endDate: null,
+};
+
+type LoanForm = Record<keyof LoanDetails, string>;
+
+function toLoanForm(loan: LoanDetails | undefined): LoanForm {
+  const l = loan ?? emptyLoan;
+  return {
+    lender: l.lender ?? "",
+    interestRate: l.interestRate ?? "",
+    initialAmount: l.initialAmount ?? "",
+    installmentAmount: l.installmentAmount ?? "",
+    nextPaymentDate: l.nextPaymentDate ?? "",
+    endDate: l.endDate ?? "",
+  };
+}
+
+const loanFields: Array<{
+  key: keyof LoanDetails;
+  label: string;
+  type: "text" | "number" | "date";
+  step?: string;
+  placeholder?: string;
+}> = [
+  { key: "lender", label: "Lender", type: "text", placeholder: "e.g. BOK" },
+  { key: "interestRate", label: "Interest Rate (%)", type: "number", step: "any", placeholder: "e.g. 6.6124301" },
+  { key: "initialAmount", label: "Loan Initial Amount", type: "number", step: "0.01" },
+  { key: "installmentAmount", label: "Monthly Installment", type: "number", step: "0.01" },
+  { key: "nextPaymentDate", label: "Next Payment Date", type: "date" },
+  { key: "endDate", label: "Expiry Date", type: "date" },
+];
 
 interface AccountEditDialogProps {
   account: AccountBalance;
@@ -59,6 +102,8 @@ export function AccountEditDialog({
     notes: account.notes ?? "",
     accountType: account.accountType,
   });
+  const [loanForm, setLoanForm] = useState<LoanForm>(toLoanForm(account.loan));
+  const supportsLoanDetails = account.loan !== undefined;
 
   useEffect(() => {
     if (open) {
@@ -70,6 +115,7 @@ export function AccountEditDialog({
         notes: account.notes ?? "",
         accountType: account.accountType,
       });
+      setLoanForm(toLoanForm(account.loan));
     }
   }, [open, account]);
 
@@ -85,6 +131,18 @@ export function AccountEditDialog({
         alertLimit: parseFloat(form.alertLimit) || 0,
         notes: form.notes || undefined,
         accountType: form.accountType,
+        ...(supportsLoanDetails && form.accountType === "liability"
+          ? {
+              loan: {
+                lender: loanForm.lender,
+                interestRate: loanForm.interestRate,
+                initialAmount: loanForm.initialAmount,
+                installmentAmount: loanForm.installmentAmount,
+                nextPaymentDate: loanForm.nextPaymentDate,
+                endDate: loanForm.endDate,
+              },
+            }
+          : {}),
       });
       onOpenChange(false);
       toast.success("Account updated!");
@@ -222,6 +280,40 @@ export function AccountEditDialog({
                 </div>
               ) : null}
             </div>
+
+            {supportsLoanDetails && form.accountType === "liability" ? (
+              <div className="mt-8">
+                <p className="mb-4 text-sm font-semibold text-slate-700">
+                  Loan details
+                </p>
+                <div className={accountFormGridClass}>
+                  {loanFields.map((field) => (
+                    <div key={field.key}>
+                      <Label
+                        htmlFor={`account-loan-${field.key}-${account.id}`}
+                        className={premiumLabelClass}
+                      >
+                        {field.label}
+                      </Label>
+                      <Input
+                        id={`account-loan-${field.key}-${account.id}`}
+                        className={premiumInputClass}
+                        type={field.type}
+                        step={field.step}
+                        placeholder={field.placeholder}
+                        value={loanForm[field.key]}
+                        onChange={(e) =>
+                          setLoanForm((prev) => ({
+                            ...prev,
+                            [field.key]: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             <div className="mt-6 flex flex-col gap-2">
               <Label

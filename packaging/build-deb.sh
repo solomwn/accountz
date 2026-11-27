@@ -30,15 +30,20 @@ mkdir -p "$APP/.next"
 cp -a .next/static "$APP/.next/static"
 [ -d public ] && cp -a public "$APP/public"
 rm -f "$APP/.env" "$APP"/.env.* 2>/dev/null || true
+# Next.js writes a small cache at runtime; /opt is read-only for the service,
+# so point it at /var/lib/accountz (created by postinst).
+rm -rf "$APP/.next/cache"
+ln -s /var/lib/accountz/cache "$APP/.next/cache"
 
 # SQL schema, in the order it must be applied
 for f in init accounts-init budget-init categories-init category-groups-init \
-         transfers-init scheduled-bills-init scheduled-bills-account-init account-types-init; do
+         transfers-init scheduled-bills-init scheduled-bills-account-init account-types-init \
+         loan-details-init; do
   cp "$f.sql" "$APP/sql/$f.sql"
 done
 printf '%s\n' init accounts-init budget-init categories-init category-groups-init \
   transfers-init scheduled-bills-init scheduled-bills-account-init account-types-init \
-  > "$APP/sql/ORDER"
+  loan-details-init > "$APP/sql/ORDER"
 
 install -Dm755 "$DEB_SRC/accountz" "$STAGE/usr/bin/accountz"
 install -Dm644 "$DEB_SRC/accountz.service" "$STAGE/lib/systemd/system/accountz.service"

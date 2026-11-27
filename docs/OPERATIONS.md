@@ -76,13 +76,14 @@ npm run start   # after build; Next default listen port is 3000 unless you set P
 ```bash
 psql "$DATABASE_URL" -f init.sql
 psql "$DATABASE_URL" -f accounts-init.sql
+psql "$DATABASE_URL" -f budget-init.sql
 psql "$DATABASE_URL" -f categories-init.sql
 psql "$DATABASE_URL" -f category-groups-init.sql
 psql "$DATABASE_URL" -f transfers-init.sql
-psql "$DATABASE_URL" -f budget-init.sql
 psql "$DATABASE_URL" -f scheduled-bills-init.sql
 psql "$DATABASE_URL" -f scheduled-bills-account-init.sql
 psql "$DATABASE_URL" -f account-types-init.sql
+psql "$DATABASE_URL" -f loan-details-init.sql
 ```
 
 Use your SQL client equivalently if `psql` is unavailable.

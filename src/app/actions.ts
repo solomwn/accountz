@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { pool } from "../../db";
 import { getLocalDateString, normalizeDateInput, toDateOnlyString } from "@/lib/format";
 import {
+  hasColumn,
   normalizeAccountType,
   supportsAccountType,
   type AccountType,
@@ -87,6 +88,20 @@ export interface Account {
   alertLimit: string;
   notes: string | null;
   accountType: AccountType;
+  /** Present only when the loan-details columns exist (loan-details-init.sql). */
+  loan?: LoanDetails;
+}
+
+export interface LoanDetails {
+  lender: string | null;
+  /** Annual interest rate in percent, e.g. "6.6124301". */
+  interestRate: string | null;
+  initialAmount: string | null;
+  installmentAmount: string | null;
+  /** YYYY-MM-DD */
+  nextPaymentDate: string | null;
+  /** YYYY-MM-DD */
+  endDate: string | null;
 }
 
 export interface AccountInput {
@@ -96,10 +111,62 @@ export interface AccountInput {
   alertLimit: number;
   notes?: string;
   accountType?: AccountType;
+  loan?: LoanDetails;
 }
 
 export interface AccountBalance extends Account {
   currentBalance: number;
+  /** Transfers received by this account (loan principal payments for loans). */
+  transfersInTotal: number;
+  transfersInCount: number;
+  /** YYYY-MM-DD of the latest transfer received, if any. */
+  lastTransferInDate: string | null;
+}
+
+const LOAN_SELECT_COLUMNS = `
+  a.lender,
+  a.interest_rate,
+  a.loan_initial_amount,
+  a.installment_amount,
+  to_char(a.next_payment_date, 'YYYY-MM-DD') AS next_payment_date,
+  to_char(a.loan_end_date, 'YYYY-MM-DD') AS loan_end_date`;
+
+function rowToLoanDetails(row: Record<string, unknown>): LoanDetails {
+  const str = (value: unknown) =>
+    value === null || value === undefined || value === "" ? null : String(value);
+  return {
+    lender: str(row.lender),
+    interestRate: str(row.interest_rate),
+    initialAmount: str(row.loan_initial_amount),
+    installmentAmount: str(row.installment_amount),
+    nextPaymentDate: str(row.next_payment_date),
+    endDate: str(row.loan_end_date),
+  };
+}
+
+async function supportsLoanDetails(): Promise<boolean> {
+  return hasColumn("accounts", "loan_end_date");
+}
+
+async function saveLoanDetails(id: string, loan: LoanDetails | undefined) {
+  if (!loan || !(await supportsLoanDetails())) return;
+  const orNull = (value: string | null) =>
+    value === null || value.trim() === "" ? null : value.trim();
+  await pool.query(
+    `UPDATE accounts
+     SET lender = $1, interest_rate = $2, loan_initial_amount = $3,
+         installment_amount = $4, next_payment_date = $5::date, loan_end_date = $6::date
+     WHERE id = $7`,
+    [
+      orNull(loan.lender),
+      orNull(loan.interestRate),
+      orNull(loan.initialAmount),
+      orNull(loan.installmentAmount),
+      orNull(loan.nextPaymentDate),
+      orNull(loan.endDate),
+      id,
+    ]
+  );
 }
 
 export interface DashboardSummary {
@@ -558,11 +625,13 @@ export async function getSchemaCapabilities(): Promise<{
 export async function getAccounts(): Promise<Account[]> {
   try {
     const includeAccountType = await supportsAccountType();
-    const accountTypeColumn = includeAccountType ? ", account_type" : "";
+    const includeLoan = await supportsLoanDetails();
+    const accountTypeColumn = includeAccountType ? ", a.account_type" : "";
+    const loanColumns = includeLoan ? `,${LOAN_SELECT_COLUMNS}` : "";
     const result = await pool.query(
-      `SELECT id, name, currency, opening_balance, alert_limit, notes${accountTypeColumn}
-       FROM accounts
-       ORDER BY name`
+      `SELECT a.id, a.name, a.currency, a.opening_balance, a.alert_limit, a.notes${accountTypeColumn}${loanColumns}
+       FROM accounts a
+       ORDER BY a.name`
     );
 
     return result.rows.map((row) => ({
@@ -575,6 +644,7 @@ export async function getAccounts(): Promise<Account[]> {
       accountType: includeAccountType
         ? normalizeAccountType(row.account_type)
         : "asset",
+      ...(includeLoan ? { loan: rowToLoanDetails(row) } : {}),
     }));
   } catch (error) {
     console.error("getAccounts error:", error);
@@ -585,7 +655,9 @@ export async function getAccounts(): Promise<Account[]> {
 export async function getAccountBalances(): Promise<AccountBalance[]> {
   try {
     const includeAccountType = await supportsAccountType();
+    const includeLoan = await supportsLoanDetails();
     const accountTypeColumn = includeAccountType ? "a.account_type," : "";
+    const loanColumns = includeLoan ? `${LOAN_SELECT_COLUMNS},` : "";
     const result = await pool.query(
       `SELECT
          a.id,
@@ -595,6 +667,19 @@ export async function getAccountBalances(): Promise<AccountBalance[]> {
          a.alert_limit,
          a.notes,
          ${accountTypeColumn}
+         ${loanColumns}
+         COALESCE((
+           SELECT SUM(t.amount) FROM transactions t
+           WHERE t.to_account_id = a.id AND t.type = 'transfer'
+         ), 0) AS transfers_in_total,
+         (
+           SELECT COUNT(*)::int FROM transactions t
+           WHERE t.to_account_id = a.id AND t.type = 'transfer'
+         ) AS transfers_in_count,
+         (
+           SELECT to_char(MAX(t.date), 'YYYY-MM-DD') FROM transactions t
+           WHERE t.to_account_id = a.id AND t.type = 'transfer'
+         ) AS last_transfer_in_date,
          COALESCE(a.opening_balance, 0)
            + COALESCE((
                SELECT SUM(t.amount)
@@ -631,7 +716,11 @@ export async function getAccountBalances(): Promise<AccountBalance[]> {
       accountType: includeAccountType
         ? normalizeAccountType(row.account_type)
         : "asset",
+      ...(includeLoan ? { loan: rowToLoanDetails(row) } : {}),
       currentBalance: parseFloat(row.current_balance),
+      transfersInTotal: parseFloat(row.transfers_in_total),
+      transfersInCount: Number(row.transfers_in_count),
+      lastTransferInDate: row.last_transfer_in_date ?? null,
     }));
   } catch (error) {
     console.error("getAccountBalances error:", error);
@@ -718,6 +807,7 @@ export async function updateAccount(id: string, data: AccountInput): Promise<voi
         ]
       );
     }
+    await saveLoanDetails(id, data.loan);
     revalidateAccountPages();
   } catch (error) {
     console.error("updateAccount error:", error);

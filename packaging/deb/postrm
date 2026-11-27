@@ -6,7 +6,7 @@ if [ -d /run/systemd/system ]; then
 fi
 
 if [ "$1" = "purge" ]; then
-  rm -rf /etc/accountz
+  rm -rf /etc/accountz /var/lib/accountz
   # Your data is NOT deleted. To delete it permanently:
   echo "accountz: your database was kept. To delete it for good run:"
   echo "  sudo -u postgres dropdb accountz && sudo -u postgres dropuser accountz"
